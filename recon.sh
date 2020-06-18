@@ -82,7 +82,7 @@ rm all_thirdlevel_subdomains.txt
 echo "Running nmap scan..."
 nmap -sn -Pn -n -iL all_subdomains.txt -oG hosts_up.txt > /dev/null
 awk -F" " '{print $2}' hosts_up.txt | sort -u | grep -v Nmap > hosts_up_cleaned.txt
-nmap -iL -T4 hosts_up_cleaned.txt -oN nmap_scan.txt > /dev/null
+nmap -T4 -iL hosts_up_cleaned.txt -oN nmap_scan.txt > /dev/null
 
 # OR to run for all ports comment the nmap command above and use the command below
 # nmap -iL hosts_up_cleaned.txt -p- -oN nmap_scan.txt
