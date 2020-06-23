@@ -28,14 +28,14 @@ cd recon_output
 cat $FILE_INPUT_PATH | cut -c3- > final_domains.txt
 echo "Created final_domains.txt"
 
-## Find subdomains using sublist3r
+## Creating a directory for secondlevel subdomains
 if [ -e ./secondlevel ];
 then
 	rm -rf ./secondlevel
 fi
 mkdir secondlevel
 
-
+## Find subdomains using sublist3r
 for DOMAIN in $(cat final_domains.txt);
 do 
 	eval "$SUBLISTER_DIRECTORY_PATH/sublist3r.py -d $DOMAIN -o secondlevel/${DOMAIN}-subdomain.txt > /dev/null"
@@ -44,11 +44,23 @@ do
 	# rm secondlevel/${DOMAIN}-subdomain.txt # remove this line if you need indiviual files for each subdomain
 done
 
-cat all_second_level_subdomains.txt | awk '/(\w+\.\w+\.\w+)$/{print $0}' | sort -u > all_second_level_subdomains_cleaned.txt
-
 ## Find subdomains using crt.sh
+for DOMAIN in $(cat final_domains.txt);
+do
+	curl -s https://crt.sh/?Identity=%.$DOMAIN grep ">*.$DOMAIN" | sed 's/<[/]*[TB][DR]>/\n/g' | grep -vE "<|^[\*]*[\.]*$DOMAIN" | sort -u | awk 'NF' >> all_second_level_subdomains.txt
+done
 
-## Other ways of finding subdomains using ... 
+## Find subdomians using certspotter
+
+for DOMAIN in $(cat final_domains.txt);
+do
+	curl -s https://certspotter.com/api/v0/certs\?domain\=$DOMAIN | jq '.[].dns_names[]' | sed 's/\"//g' | sed 's/\*\.//g' | sort -u | grep $DOMAIN >> all_second_level_subdomains.txt
+done
+
+## Find subdomains using 
+
+## Keeping only unique subdomains
+cat all_second_level_subdomains.txt | sort -u > all_second_level_subdomains_cleaned.txt
 
 ## Finding third-level subdomains
 
@@ -69,13 +81,13 @@ cat all_second_level_subdomains.txt | awk '/(\w+\.\w+\.\w+)$/{print $0}' | sort 
 #
 
 ## Creating a final list
-cat final_domains.txt >> all_subdomians.txt
+cat final_domains.txt >> all_subdomains.txt
 cat all_second_level_subdomains_cleaned.txt >> all_subdomains.txt 
 #cat all_thirdlevel_subdomains.txt >> all_subdomains.txt
 
 ## Cleaning files
 rm all_second_level_subdomains.txt
-rm all_thirdlevel_subdomains.txt
+#rm all_thirdlevel_subdomains.txt
 
 
 ## Running nmap scan
