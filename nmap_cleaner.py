@@ -1,12 +1,21 @@
 #!/bin/python
 
-with open("nmap.txt") as f:
-	nmap_lines = f.read()
+import xml.etree.ElementTree as ET
+import os
 
+tree = ET.parse("Desktop/bugbounty/bpost/nmap_test.xml")
 
-SEARCH_STRING = "Nmap scan report for "
+root = tree.getroot()
 
+ip_ports = {}
 
-while nmap_lines.find(SEARCH_STRING) != -1:
-	
-	ip = nmap[nmap_lines.find(SEARCH_STRING) + len(SEARCH_STRING):
+for item in root.findall("./host"):
+	hostname = item.find('./hostnames/hostname').attrib['name']
+	print(hostname)
+	ports = []
+	for port in item.findall('./ports/port'):
+		ports.append(port.attrib['portid'])
+	ip_ports[hostname] = ','.join(ports)
+
+for ip, ports in ip_ports.items():
+	print("nmap -T4 -A -p{0} {1} -oN {1}-nmap.txt".format(ports, ip))
