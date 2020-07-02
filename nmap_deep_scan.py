@@ -9,7 +9,6 @@ file_path = ""
 
 def extract_ip_and_ports(file_path):
 	tree = ET.parse(file_path)
-
 	root = tree.getroot()
 
 	ip_ports = {}
