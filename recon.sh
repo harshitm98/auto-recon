@@ -57,7 +57,7 @@ do
 	curl -s https://certspotter.com/api/v0/certs\?domain\=$DOMAIN | jq '.[].dns_names[]' | sed 's/\"//g' | sed 's/\*\.//g' | sort -u | grep $DOMAIN >> all_second_level_subdomains.txt
 done
 
-## Find subdomains using 
+## Find subdomains using recon-ng [TODO]
 
 ## Keeping only unique subdomains
 cat all_second_level_subdomains.txt | sort -u > all_second_level_subdomains_cleaned.txt
@@ -90,11 +90,19 @@ rm all_second_level_subdomains.txt
 #rm all_thirdlevel_subdomains.txt
 
 
-## Running nmap scan
-echo "Running nmap scan..."
-nmap -sn -Pn -n -iL all_subdomains.txt -oG hosts_up.txt > /dev/null
-awk -F" " '{print $2}' hosts_up.txt | sort -u | grep -v Nmap > hosts_up_cleaned.txt
-nmap -T4 -iL hosts_up_cleaned.txt -oN nmap_scan.txt -oX nmap_scan.xml > /dev/null
+## Checking for online domains
+echo "Checking online domains..."
+for DOMAIN in $(cat all_subdomains.txt);
+do
+  if ping -c 1 $DOMAIN &>/dev/null
+  then
+    echo "$DOMAIN" >> domains_up.txt
+  fi
+done
+
+## Running nmap scans on online domains
+echo "Running nmap scan on online domains"
+nmap -T4 -iL domains_up.txt -oN nmap_scan.txt -oX nmap_scan.xml > /dev/null
 
 # OR to run for all ports comment the nmap command above and use the command below
 # nmap -T4 -iL hosts_up_cleaned.txt -p- -oN nmap_scan.txt
