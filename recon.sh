@@ -6,7 +6,7 @@ SUBLISTER_DIRECTORY_PATH="/opt/Sublist3r"
 ## Take inputs
 while getopts ":o:i:" opt; do
   case $opt in
-    o) OUTPUT_PATH="$OPTARG"
+    o) OUTPUT_DIRECTORY="$OPTARG"
     ;;
     i) FILE_INPUT_PATH="$OPTARG"
     ;;
@@ -15,13 +15,13 @@ while getopts ":o:i:" opt; do
   esac
 done
 
-## Creating the recon_output directory
-if [ -e ./recon_output ];
+## Creating the output directory directory
+if [ -e ./$OUTPUT_DIRECTORY ];
 then
-	rm -rf ./recon_output
+	rm -rf ./$OUTPUT_DIRECTORY
 fi
-mkdir recon_output
-cd recon_output
+mkdir $OUTPUT_DIRECTORY
+cd $OUTPUT_DIRECTORY
 
 
 ## Create a final subdomains list (*.example.com -> example.com)
@@ -40,15 +40,18 @@ for DOMAIN in $(cat final_domains.txt);
 do 
 	eval "$SUBLISTER_DIRECTORY_PATH/sublist3r.py -d $DOMAIN -o secondlevel/${DOMAIN}-subdomain.txt > /dev/null"
 	cat secondlevel/${DOMAIN}-subdomain.txt >> all_second_level_subdomains.txt
-	echo "Completed ${DOMAIN}..."
 	# rm secondlevel/${DOMAIN}-subdomain.txt # remove this line if you need indiviual files for each subdomain
 done
+SUBDOMAIN_COUNT=$(cat all_second_level_subdomains.txt | wc -l)
+echo "Completed listing subdomains using sublist3r. Total subdomain count : $SUBDOMAIN_COUNT"
 
 ## Find subdomains using crt.sh
 for DOMAIN in $(cat final_domains.txt);
 do
 	curl -s https://crt.sh/?Identity=%.$DOMAIN grep ">*.$DOMAIN" | sed 's/<[/]*[TB][DR]>/\n/g' | grep -vE "<|^[\*]*[\.]*$DOMAIN" | sort -u | awk 'NF' >> all_second_level_subdomains.txt
 done
+SUBDOMAIN_COUNT=$(cat all_second_level_subdomains.txt | wc -l)
+echo "Completed listing subdomains using crt.sh. Total subdomain count : $SUBDOMAIN_COUNT"
 
 ## Find subdomians using certspotter
 
@@ -56,11 +59,15 @@ for DOMAIN in $(cat final_domains.txt);
 do
 	curl -s https://certspotter.com/api/v0/certs\?domain\=$DOMAIN | jq '.[].dns_names[]' | sed 's/\"//g' | sed 's/\*\.//g' | sort -u | grep $DOMAIN >> all_second_level_subdomains.txt
 done
+SUBDOMAIN_COUNT=$(cat all_second_level_subdomains.txt | wc -l)
+echo "Completed listing subdomains using certspotter. Total subdomain count : $SUBDOMAIN_COUNT"
 
 ## Find subdomains using recon-ng [TODO]
 
 ## Keeping only unique subdomains
 cat all_second_level_subdomains.txt | sort -u > all_second_level_subdomains_cleaned.txt
+SUBDOMAIN_COUNT=$(cat all_second_level_subdomains_cleaned.txt | wc -l)
+echo "Cleaned duplicate entries. Total subdomain count : $SUBDOMAIN_COUNT"
 
 ## Finding third-level subdomains
 
@@ -91,20 +98,29 @@ rm all_second_level_subdomains.txt
 
 
 ## Checking for online domains
-echo "Checking online domains..."
+echo "Checking domain online status..."
+
+check_status(){
+    if ping -c 1 $1 &>/dev/null
+    then
+        echo "$1" >> domains_up.txt
+    else
+        echo "$1" >> not_up.txt
+    fi
+}
+
 for DOMAIN in $(cat all_subdomains.txt);
 do
-  if ping -c 1 $DOMAIN &>/dev/null
-  then
-    echo "$DOMAIN" >> domains_up.txt
-  fi
+    check_status $DOMAIN &
 done
+wait
+
+DOMAINS_UP_COUNT=$(cat domains_up.txt | wc -l)
+echo "Domains that are up : $DOMAINS_UP_COUNT"
 
 ## Running nmap scans on online domains
-echo "Running nmap scan on online domains"
+echo "Running nmap scan on online domains..."
 nmap -T4 -iL domains_up.txt -oN nmap_scan.txt -oX nmap_scan.xml > /dev/null
 
 # OR to run for all ports comment the nmap command above and use the command below
 # nmap -T4 -iL hosts_up_cleaned.txt -p- -oN nmap_scan.txt
-
-

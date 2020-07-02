@@ -30,9 +30,11 @@ def extract_ip_and_ports(file_path):
 if __name__ == '__main__':
 	if len(sys.argv) > 1:
 		args = sys.argv[1:]
-		if '-i' in args:
-			file_path = args[args.index('-i') + 1]
+		if '-f' in args:
+			file_path = args[args.index('-f') + 1]
 		if '-v' in args:
 			verbosity = True
+		if '-a' in args:
+			print("")
 		if file_path != "":
 			extract_ip_and_ports(file_path)
