@@ -4,11 +4,11 @@
 SUBLISTER_DIRECTORY_PATH="/opt/Sublist3r"
 
 ## Take inputs
-while getopts ":o:i:" opt; do
+while getopts ":o:d:" opt; do
   case $opt in
     o) OUTPUT_DIRECTORY="$OPTARG"
     ;;
-    i) FILE_INPUT_PATH="$OPTARG"
+    d) DOMAINS_LIST="$OPTARG"
     ;;
     \?) echo "Invalid option -$OPTARG" >&2
     ;;
@@ -25,7 +25,7 @@ cd $OUTPUT_DIRECTORY
 
 
 ## Create a final subdomains list (*.example.com -> example.com)
-cat $FILE_INPUT_PATH | cut -c3- > final_domains.txt
+cat $DOMAINS_LIST | cut -c3- > final_domains.txt
 echo "Created final_domains.txt"
 
 ## Creating a directory for secondlevel subdomains
@@ -38,7 +38,7 @@ mkdir secondlevel
 ## Find subdomains using sublist3r
 for DOMAIN in $(cat final_domains.txt);
 do 
-	eval "$SUBLISTER_DIRECTORY_PATH/sublist3r.py -d $DOMAIN -o secondlevel/${DOMAIN}-subdomain.txt > /dev/null"
+	eval "python3 $SUBLISTER_DIRECTORY_PATH/sublist3r.py -d $DOMAIN -o secondlevel/${DOMAIN}-subdomain.txt > /dev/null"
 	cat secondlevel/${DOMAIN}-subdomain.txt >> all_second_level_subdomains.txt
 	# rm secondlevel/${DOMAIN}-subdomain.txt # remove this line if you need indiviual files for each subdomain
 done
@@ -62,7 +62,6 @@ done
 SUBDOMAIN_COUNT=$(cat all_second_level_subdomains.txt | wc -l)
 echo "Completed listing subdomains using certspotter. Total subdomain count : $SUBDOMAIN_COUNT"
 
-## Find subdomains using recon-ng [TODO]
 
 ## Keeping only unique subdomains
 cat all_second_level_subdomains.txt | sort -u > all_second_level_subdomains_cleaned.txt
